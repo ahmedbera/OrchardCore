@@ -8,11 +8,15 @@
 
 @if (Model.AdminTemplates)
 {
-    <zone Name="Title"><h1>@RenderTitleSegments(T["Edit Admin Template"])</h1></zone>
+    <zone Name="Title">
+        <h1>@RenderTitleSegments(T["Edit Admin Template"])</h1>
+    </zone>
 }
 else
 {
-    <zone Name="Title"><h1>@RenderTitleSegments(T["Edit Template"])</h1></zone>
+    <zone Name="Title">
+        <h1>@RenderTitleSegments(T["Edit Template"])</h1>
+    </zone>
 }
 
 <div asp-validation-summary="ModelOnly"></div>
@@ -21,11 +25,13 @@ else
         <div class="card-body bg-primary p-3 text-end">
             <div class="btn-group">
                 <button type="submit" name="submit" class="btn btn-sm btn-primary save">@T["Save"]</button>
-                <button type="button" class="btn btn-sm btn-primary dropdown-toggle dropdown-toggle-split" data-reference="parent" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <button type="button" class="btn btn-sm btn-primary dropdown-toggle dropdown-toggle-split"
+                    data-reference="parent" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <span class="visually-hidden">@T["Toggle Dropdown"]</span>
                 </button>
                 <div class="dropdown-menu">
-                    <button class="dropdown-item save-continue" name="submit" type="submit" value="SaveAndContinue">@T["and continue"]</button>
+                    <button class="dropdown-item save-continue" name="submit" type="submit"
+                        value="SaveAndContinue">@T["and continue"]</button>
                 </div>
             </div>
 
@@ -36,12 +42,15 @@ else
 
             @if (!Model.AdminTemplates)
             {
-                <a class="btn btn-sm btn-info" role="button" href="@Url.Action("Index", "Preview", new { area = "OrchardCore.Templates" })" target="_blank">@T["Preview"]</a>
+                <a class="btn btn-sm btn-info" role="button"
+                href="@Url.Action("Index", "Preview", new { area = "OrchardCore.Templates" })"
+                target="_blank">@T["Preview"]</a>
             }
         </div>
     </div>
 
     <input type="hidden" value="@Model.Name" name="sourceName" />
+    <input type="hidden" value="@Model.CursorPosition" name="cursorPosition" id="cursorPosition" />
     <input type="hidden" asp-for="AdminTemplates" />
 
     <div class="mb-3" asp-validation-class-for="Name">
@@ -59,7 +68,8 @@ else
 
     <div class="mb-3" asp-validation-class-for="Content">
         <label asp-for="Content">@T["Content"]</label>
-        <div id="@Html.IdFor(x => x.Content)_editor" asp-for="Text" style="min-height: 600px;" class="form-control" dir="@culture.GetLanguageDirection()"></div>
+        <div id="@Html.IdFor(x => x.Content)_editor" asp-for="Text" style="min-height: 600px;" class="form-control"
+            dir="@culture.GetLanguageDirection()"></div>
         <textarea asp-for="Content" class="content-preview-text" hidden>@Html.Raw(Model.Content)</textarea>
         <span asp-validation-for="Content"></span>
         <span class="hint">@T["The Liquid template."]</span>
@@ -140,6 +150,21 @@ else
             editor.addAction(shortcodesAction);
             editor.getModel().setValue(textArea.value);
 
+            // store and retrive cursor position on a hidden input.
+            var cursorInput = document.getElementById('cursorPosition');
+            // values are stored as "lineNumber,column" so to retrive both 
+            // split value by "," character.
+            const cursorPositionValues = cursorInput.value.split(",");
+            // if value is empty that means there are no saved cursor position
+            // in that case skip cursor position initialization.
+            if (cursorPositionValues.length == 2) {
+                editor.focus();
+                editor.setPosition({
+                    lineNumber: Number(cursorPositionValues[0]),
+                    column: Number(cursorPositionValues[1])
+                });
+            }
+
             window.addEventListener("submit", function () {
                 textArea.value = editor.getValue();
             });
@@ -157,6 +182,22 @@ else
                 // this will raise an event in the preview window to notify that the live preview is no longer active.
                 localStorage.setItem('OrchardCore.templates:not-connected', '');
                 localStorage.removeItem('OrchardCore.templates:not-connected');
+            });
+
+            window.addEventListener('keydown', function (e) {
+                // add eventListener to ctrl+s combination to mimic normal text
+                // editor behaviour. 
+                if (e.ctrlKey && e.key === 's') {
+                    // Prevent the Save dialog to open
+                    e.preventDefault();
+                    const cursorPosition = editor.getPosition();
+                    // save cursor position so it can be read after page reload.
+                    const cursorInput = document.querySelector('[name="cursorPosition"]');
+                    cursorInput.value = cursorPosition.lineNumber + "," + cursorPosition.column;
+                    // find and click to save button.
+                    const saveButton = document.querySelector('[value="SaveAndContinue"]');
+                    saveButton.click();
+                }
             });
 
         });
@@ -202,4 +243,3 @@ else
         initializeTemplatePreview(document.getElementById('@Html.IdFor(x => x.Content)'));
     });
 </script>
-
